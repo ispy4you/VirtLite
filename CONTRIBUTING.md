@@ -16,13 +16,28 @@ swift build
 swift test
 ```
 
-There is no application target yet. `VirtLiteCore` and `VirtLiteVZ` build as libraries; the
-SwiftUI app arrives with milestone 1.
+To run the app, build the bundle instead of using `swift run`:
 
-Running a virtual machine requires the `com.apple.security.virtualization` entitlement, so
-anything that actually boots a guest must be built and signed as an app bundle. Plain
-`swift run` will not do — this is a known friction point during stage 0 and is documented in
-[Docs/stage-0.md](Docs/stage-0.md) once that work lands.
+```sh
+Scripts/build-app.sh          # debug
+open .build/arm64-apple-macosx/debug/VirtLite.app
+```
+
+`swift run` cannot launch it. Starting a guest requires the `com.apple.security.virtualization`
+entitlement, entitlements only attach to a signed bundle, and a bare executable is neither. The
+script assembles `VirtLite.app`, applies `Resources/Info.plist` and the entitlements, and signs
+ad-hoc — which is enough locally. Debug builds also get `get-task-allow`, without which no
+debugger can attach.
+
+Release builds sign with a real identity:
+
+```sh
+VIRTLITE_SIGNING_IDENTITY="Developer ID Application: ..." Scripts/build-app.sh release
+```
+
+There is no `.xcodeproj`. The package builds with plain SwiftPM so the project stays usable from
+any editor and avoids a file format that conflicts badly on merge. Xcode can still open the
+package directory directly.
 
 ## How the code is organised
 

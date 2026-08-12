@@ -74,7 +74,8 @@ swift build
 swift test
 ```
 
-Target приложения пока нет; `VirtLiteCore` и `VirtLiteVZ` собираются и тестируются отдельно.
+Чтобы запустить приложение, соберите подписанный бандл через `Scripts/build-app.sh` — `swift run`
+не подойдёт: запуск гостя требует entitlement, а entitlement живёт только в подписанном бандле.
 Границы слоёв и что куда класть — в [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Архитектура
