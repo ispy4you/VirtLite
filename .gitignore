@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Signing and secrets — never commit
+*.p12
+*.mobileprovision
+*.provisionprofile
+.env
+notarization-*.json
+
+# Local VM artifacts: disk images are huge and must never reach git
+*.asif
+*.iso
+*.ipsw
+*.vzvmsave
+*.virtlite/

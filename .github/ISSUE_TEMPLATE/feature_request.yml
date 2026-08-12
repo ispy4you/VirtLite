@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest something VirtLite should do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Some things are permanently out of scope because the platform cannot do them:
+        Windows guests, x86_64 guest systems, Intel Macs as hosts. The README explains why.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Describe the situation you are in, not the solution you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like VirtLite to do
+    validations:
+      required: true
+
+  - type: input
+    id: requirement
+    attributes:
+      label: Related requirement ID
+      description: If this maps to something in the specification, name it.
+      placeholder: "NET-03"
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: Workarounds, other tools, manual steps.

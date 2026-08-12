@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    # Pinned rather than macos-latest: VirtLite requires the macOS 26 SDK, and a silent
+    # image migration underneath us would fail in a confusing way.
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      # ARC-01 is a boundary the project depends on, so it is checked before anything is built.
+      - name: Check core boundary
+        run: ./Scripts/check-core-boundary.sh
+
+      - name: Build
+        run: swift build --build-tests
+
+      # Only VirtLiteCore is covered here. Tests that boot a real guest need the virtualization
+      # entitlement and a signed bundle, which hosted runners cannot provide — that coverage
+      # (OSS-05) has to run on self-hosted hardware. The gap is deliberate, not an oversight.
+      - name: Test
+        run: swift test --skip-build

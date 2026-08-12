@@ -1,0 +1,69 @@
+name: Bug report
+description: Something behaves differently from what you expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        VirtLite is in early development — most things are not built yet. Before filing,
+        check the roadmap in the README to see whether the feature exists at all.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a VM from ...
+        2. Start it
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.5 (25F84)"
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Mac model and chip
+      placeholder: "MacBook Pro, M3 Pro"
+    validations:
+      required: true
+
+  - type: input
+    id: guest
+    attributes:
+      label: Guest OS and image
+      description: Distribution, version and where the image came from.
+      placeholder: "Ubuntu 24.04.1 arm64, ubuntu-24.04.1-live-server-arm64.iso"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output or diagnostic report
+      description: >
+        Serial console output is far more useful than a screenshot when a guest fails to boot.
+      render: text
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: The image is arm64, not x86_64
+          required: true
+        - label: I am on an Apple Silicon Mac running macOS 26 or later
+          required: true
