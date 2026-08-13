@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Required to create and run virtual machines. Available to any developer;
+	     unlike com.apple.vm.networking, it needs no approval from Apple. -->
+	<key>com.apple.security.virtualization</key>
+	<true/>
+</dict>
+</plist>

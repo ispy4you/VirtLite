@@ -73,7 +73,8 @@ swift build
 swift test
 ```
 
-The app target is not in place yet; `VirtLiteCore` and `VirtLiteVZ` build and test on their own.
+To run the app, build the signed bundle with `Scripts/build-app.sh`. `swift run` will not do:
+starting a guest needs an entitlement, and entitlements come from a code signature.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the layer boundaries and what belongs where.
 
 ## Architecture

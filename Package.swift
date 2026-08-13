@@ -5,6 +5,7 @@ let package = Package(
     name: "VirtLite",
     platforms: [.macOS("26.0")],
     products: [
+        .executable(name: "VirtLite", targets: ["VirtLite"]),
         .library(name: "VirtLiteCore", targets: ["VirtLiteCore"]),
         .library(name: "VirtLiteVZ", targets: ["VirtLiteVZ"]),
     ],
@@ -14,6 +15,11 @@ let package = Package(
 
         // The Virtualization.framework backend.
         .target(name: "VirtLiteVZ", dependencies: ["VirtLiteCore"]),
+
+        // The application. Built into a signed .app bundle by Scripts/build-app.sh —
+        // `swift run` produces an unsigned binary, and an unsigned binary carries no
+        // entitlements, so it cannot start a guest.
+        .executableTarget(name: "VirtLite", dependencies: ["VirtLiteCore", "VirtLiteVZ"]),
 
         .testTarget(name: "VirtLiteCoreTests", dependencies: ["VirtLiteCore"]),
     ]

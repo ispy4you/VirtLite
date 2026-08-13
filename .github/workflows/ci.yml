@@ -38,3 +38,8 @@ jobs:
       # (OSS-05) has to run on self-hosted hardware. The gap is deliberate, not an oversight.
       - name: Test
         run: swift test --skip-build
+
+      # Assembling and signing the bundle is the only way the app can carry the virtualization
+      # entitlement, so it is checked here rather than discovered broken at release time.
+      - name: Build the app bundle
+        run: ./Scripts/build-app.sh release
