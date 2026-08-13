@@ -12,13 +12,16 @@ public enum VZLinuxConfiguration {
     public struct BootMedia: Sendable {
         /// Installer image to boot from. Detached once the guest is installed (INS-01).
         public var installerISO: URL?
+        /// Optional cloud-init seed image, used to drive an unattended installation.
+        public var seedISO: URL?
         /// The machine's own disk.
         public var disk: URL
         /// EFI variable storage, created on first boot and kept in the bundle.
         public var nvram: URL
 
-        public init(installerISO: URL? = nil, disk: URL, nvram: URL) {
+        public init(installerISO: URL? = nil, seedISO: URL? = nil, disk: URL, nvram: URL) {
             self.installerISO = installerISO
+            self.seedISO = seedISO
             self.disk = disk
             self.nvram = nvram
         }
@@ -91,6 +94,11 @@ public enum VZLinuxConfiguration {
         // find bootable removable media on.
         if let iso = media.installerISO {
             let attachment = try VZDiskImageStorageDeviceAttachment(url: iso, readOnly: true)
+            devices.append(VZUSBMassStorageDeviceConfiguration(attachment: attachment))
+        }
+
+        if let seed = media.seedISO {
+            let attachment = try VZDiskImageStorageDeviceAttachment(url: seed, readOnly: true)
             devices.append(VZUSBMassStorageDeviceConfiguration(attachment: attachment))
         }
 

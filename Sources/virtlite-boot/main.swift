@@ -14,6 +14,7 @@ import VirtLiteVZ
 
 struct Options {
     var iso: URL?
+    var seed: URL?
     var bundle: URL
     var cpuCount = 2
     var memoryInBytes: UInt64 = 4 * 1024 * 1024 * 1024
@@ -35,6 +36,9 @@ func parseArguments() -> Options {
 
     if let iso = value(after: "--iso") {
         options.iso = URL(fileURLWithPath: iso)
+    }
+    if let seed = value(after: "--seed") {
+        options.seed = URL(fileURLWithPath: seed)
     }
     if let bundle = value(after: "--bundle") {
         options.bundle = URL(fileURLWithPath: bundle)
@@ -128,6 +132,7 @@ let vzConfiguration = try VZLinuxConfiguration.make(
     from: configuration,
     media: VZLinuxConfiguration.BootMedia(
         installerISO: options.iso,
+        seedISO: options.seed,
         disk: bundle.primaryDiskURL,
         nvram: bundle.nvramURL
     ),
