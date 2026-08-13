@@ -91,7 +91,33 @@ diskutil image create blank --format ASIF --size 8G --fs none Disk.asif
 Отдельно: сеть может использовать только тот процесс, который её создал. Обмен сетями между
 приложениями заблокирован намеренно.
 
-## Открытый риск: entitlement для vmnet
+## Entitlement для vmnet — проверено, риска нет
+
+**Результат: `vmnet` довольствуется `com.apple.security.virtualization`.** Ограниченный
+`com.apple.vm.networking`, которым закрыт bridged networking, не нужен. Проброс портов
+(`NET-02`) и изолированные сети (`NET-03`) доступны без всякого согласования с Apple.
+
+Проверено эмпирически — `Tools/vmnet-probe.c`, ad-hoc подпись, три прогона одного бинарника:
+
+| Подпись | `vmnet_network_create` |
+|---|---|
+| Без подписи | `VMNET_MEM_FAILURE` |
+| Подписан, entitlements нет | `VMNET_MEM_FAILURE` |
+| Подписан, `com.apple.security.virtualization` | **`VMNET_SUCCESS`** |
+
+Правило проброса портов (`vmnet_network_configuration_add_port_forwarding_rule`) принимается на
+объекте конфигурации в любом случае — отказ приходит позже, при создании сети.
+
+Отдельно стоит запомнить: при нехватке прав возвращается **`VMNET_MEM_FAILURE`**, а не
+`VMNET_INVALID_ACCESS`. Код возврата говорит о нехватке памяти, хотя проблема в подписи —
+разработчик, наткнувшийся на это, будет искать не там. Сообщение об ошибке в приложении должно
+называть настоящую причину.
+
+Порядок аргументов в правиле — `(protocol, family, internal_port, external_port, address)`, то
+есть сначала порт гостя, потом порт хоста, и адрес гостя обязателен. Перепутать местами легко.
+
+<details>
+<summary>Исходная формулировка риска (до проверки)</summary>
 
 Заголовок `VZVmnetNetworkDeviceAttachment.h` говорит прямо:
 
@@ -120,3 +146,5 @@ vmnet-топологиях. Если vmnet потребует `com.apple.vm.netw
 
 `VZNATNetworkDeviceAttachment` (`NET-01`) этим риском не затронут — это отдельный путь, которым
 VZ пользуется сам, и на нём MVP не завязан.
+
+</details>
