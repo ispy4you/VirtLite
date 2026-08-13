@@ -73,8 +73,8 @@ swift build
 swift test
 ```
 
-To run the app, build the signed bundle with `Scripts/build-app.sh` — `swift run` cannot launch it,
-because starting a guest needs an entitlement and entitlements only attach to a signed bundle.
+To run the app, build the signed bundle with `Scripts/build-app.sh`. `swift run` will not do:
+starting a guest needs an entitlement, and entitlements come from a code signature.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the layer boundaries and what belongs where.
 
 ## Architecture

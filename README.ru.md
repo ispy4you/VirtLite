@@ -74,8 +74,8 @@ swift build
 swift test
 ```
 
-Чтобы запустить приложение, соберите подписанный бандл через `Scripts/build-app.sh` — `swift run`
-не подойдёт: запуск гостя требует entitlement, а entitlement живёт только в подписанном бандле.
+Чтобы запустить приложение, соберите подписанный бандл через `Scripts/build-app.sh`. `swift run`
+не подойдёт: запуск гостя требует entitlement, а entitlement появляется только из подписи.
 Границы слоёв и что куда класть — в [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Архитектура

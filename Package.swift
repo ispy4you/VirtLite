@@ -17,8 +17,8 @@ let package = Package(
         .target(name: "VirtLiteVZ", dependencies: ["VirtLiteCore"]),
 
         // The application. Built into a signed .app bundle by Scripts/build-app.sh —
-        // running a guest needs the virtualization entitlement, which a bare executable
-        // cannot carry.
+        // `swift run` produces an unsigned binary, and an unsigned binary carries no
+        // entitlements, so it cannot start a guest.
         .executableTarget(name: "VirtLite", dependencies: ["VirtLiteCore", "VirtLiteVZ"]),
 
         .testTarget(name: "VirtLiteCoreTests", dependencies: ["VirtLiteCore"]),

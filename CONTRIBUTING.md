@@ -23,11 +23,15 @@ Scripts/build-app.sh          # debug
 open .build/arm64-apple-macosx/debug/VirtLite.app
 ```
 
-`swift run` cannot launch it. Starting a guest requires the `com.apple.security.virtualization`
-entitlement, entitlements only attach to a signed bundle, and a bare executable is neither. The
-script assembles `VirtLite.app`, applies `Resources/Info.plist` and the entitlements, and signs
-ad-hoc — which is enough locally. Debug builds also get `get-task-allow`, without which no
-debugger can attach.
+`swift run` will not do. Starting a guest requires the `com.apple.security.virtualization`
+entitlement, and entitlements come from a code signature — `swift run` launches the binary it
+just built, unsigned. The script assembles `VirtLite.app`, applies `Resources/Info.plist` and the
+entitlements, and signs ad-hoc, which is enough locally. Debug builds also get `get-task-allow`,
+without which no debugger can attach.
+
+The bundle is what makes it an app, not what makes the entitlement work: a bare executable
+signed with the same entitlement can start a guest perfectly well, which is how
+`Scripts/build-boot.sh` builds the headless tool.
 
 Release builds sign with a real identity:
 
