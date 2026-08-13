@@ -14,8 +14,19 @@ final class MachineEntry: Identifiable {
     /// nothing more.
     var running: (any VMLifecycle)?
 
-    /// Attached until the guest has a system of its own, then dropped (INS-01).
+    /// Attached until the user ejects it (INS-01).
+    ///
+    /// Deliberately not dropped when the machine stops: a guest that failed to boot, or that was
+    /// shut down halfway through installation, still needs its installer next time.
     var installerISO: URL?
+
+    /// Set when a machine stops so quickly that it plainly had nothing to boot.
+    ///
+    /// Without this the interface shows a machine going straight back to Stopped and says
+    /// nothing, which reads as the app being broken (NFR-06, NFR-11).
+    var hint: String?
+
+    fileprivate var startedAt: Date?
 
     // Identifiable is reached from outside the main actor, and both of these read an immutable
     // Sendable value, so they are safe to expose without isolation.
@@ -38,6 +49,7 @@ final class MachineStore {
 
     private let library: MachineLibrary
     private let backend = VZBackend()
+    private let installers = InstallerImageStore()
 
     var hardwareLimits: HardwareLimits { backend.hardwareLimits }
 
@@ -57,7 +69,11 @@ final class MachineStore {
                 if let entry = existing[machine.id], entry.state.isActive {
                     return entry
                 }
-                return MachineEntry(machine: machine)
+                let entry = MachineEntry(machine: machine)
+                // An installer outlives the app session; forgetting it leaves a machine that
+                // cannot boot and cannot say why.
+                entry.installerISO = installers.installer(for: machine.id)
+                return entry
             }
 
             damagedBundles = (try? library.unreadableBundles()) ?? []
@@ -97,6 +113,9 @@ final class MachineStore {
 
         let entry = MachineEntry(machine: machine)
         entry.installerISO = installerISO
+        if let installerISO {
+            installers.remember(installerISO, for: machine.id)
+        }
         entries.append(entry)
         entries.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
@@ -125,6 +144,8 @@ final class MachineStore {
             }
 
             entry.running = machine
+            entry.hint = nil
+            entry.startedAt = Date()
             follow(machine, for: entry)
             try await machine.start()
         } catch {
@@ -141,11 +162,40 @@ final class MachineStore {
 
                 if state == .stopped || state == .error {
                     entry.running = nil
-                    // The installer has done its job; from here the machine boots its own disk.
-                    entry.installerISO = nil
+                    noteImmediateStop(entry)
                 }
             }
         }
+    }
+
+    /// A guest that powers off within a couple of seconds did not boot — it found nothing to
+    /// boot from. Saying so is the difference between a bug report and a shrug.
+    private func noteImmediateStop(_ entry: MachineEntry) {
+        guard let startedAt = entry.startedAt else { return }
+        entry.startedAt = nil
+
+        guard Date().timeIntervalSince(startedAt) < 5 else { return }
+
+        if entry.installerISO == nil {
+            entry.hint = "The guest powered off immediately. This machine has no operating system on its disk and no installer image attached — choose one to install a system."
+        } else {
+            entry.hint = "The guest powered off immediately. The attached image may not be bootable here: it has to be built for ARM64, since Apple Silicon cannot run x86_64 systems."
+        }
+    }
+
+    /// Detaches the installer once a system is installed (INS-01).
+    ///
+    /// Explicit rather than automatic: nothing on the host can reliably tell a finished
+    /// installation from an abandoned one, and guessing wrong leaves a machine unable to boot.
+    func ejectInstaller(from entry: MachineEntry) {
+        entry.installerISO = nil
+        installers.forget(for: entry.id)
+    }
+
+    func attachInstaller(_ url: URL, to entry: MachineEntry) {
+        entry.installerISO = url
+        entry.hint = nil
+        installers.remember(url, for: entry.id)
     }
 
     func requestStop(_ entry: MachineEntry) async {
@@ -187,6 +237,7 @@ final class MachineStore {
             if removingFiles {
                 try library.delete(entry.machine)
             }
+            installers.forget(for: entry.id)
             entries.removeAll { $0.id == entry.id }
         } catch {
             lastError = error.localizedDescription
