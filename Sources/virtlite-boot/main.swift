@@ -15,6 +15,7 @@ import VirtLiteVZ
 struct Options {
     var iso: URL?
     var seed: URL?
+    var exercise = false
     var bundle: URL
     var cpuCount = 2
     var memoryInBytes: UInt64 = 4 * 1024 * 1024 * 1024
@@ -36,6 +37,10 @@ func parseArguments() -> Options {
 
     if let iso = value(after: "--iso") {
         options.iso = URL(fileURLWithPath: iso)
+    }
+    if let index = arguments.firstIndex(of: "--exercise") {
+        options.exercise = true
+        arguments.remove(at: index)
     }
     if let seed = value(after: "--seed") {
         options.seed = URL(fileURLWithPath: seed)
@@ -59,29 +64,6 @@ func parseArguments() -> Options {
 func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data("virtlite-boot: \(message)\n".utf8))
     exit(1)
-}
-
-// MARK: - Delegate
-
-/// Keeps the process alive while the guest runs and reports why it stopped.
-final class BootObserver: NSObject, VZVirtualMachineDelegate, @unchecked Sendable {
-    func guestDidStop(_ virtualMachine: VZVirtualMachine) {
-        print("\n[virtlite-boot] guest powered off")
-        exit(0)
-    }
-
-    func virtualMachine(_ virtualMachine: VZVirtualMachine, didStopWithError error: Error) {
-        print("\n[virtlite-boot] guest stopped with an error: \(error.localizedDescription)")
-        exit(1)
-    }
-
-    func virtualMachine(
-        _ virtualMachine: VZVirtualMachine,
-        networkDevice: VZNetworkDevice,
-        attachmentWasDisconnectedWithError error: Error
-    ) {
-        print("[virtlite-boot] network detached: \(error.localizedDescription)")
-    }
 }
 
 // MARK: - Run
@@ -150,13 +132,41 @@ print("""
 
 """)
 
-let observer = BootObserver()
-let virtualMachine = VZVirtualMachine(configuration: vzConfiguration)
-virtualMachine.delegate = observer
+// The tool drives VZMachine rather than VZVirtualMachine directly, so a run here exercises the
+// same code path the app uses. A backend bug reproduces in both or neither.
+let machine = VZMachine(configuration: vzConfiguration, name: configuration.name)
 
-virtualMachine.start { result in
-    if case let .failure(error) = result {
-        fail("could not start: \(error.localizedDescription)")
+Task {
+    // Watching the stream rather than polling: this is how the interface will follow a machine
+    // too, so a missing transition shows up here first (LC-04).
+    for await state in machine.stateUpdates {
+        print("[virtlite-boot] state: \(state.rawValue)")
+        if state == .stopped {
+            exit(0)
+        }
+        if state == .error {
+            exit(1)
+        }
+    }
+}
+
+Task {
+    do {
+        try await machine.start()
+
+        if options.exercise {
+            print("[virtlite-boot] exercising the lifecycle")
+            print("[virtlite-boot] saved state supported: \(machine.supportsSavedState)")
+
+            try await Task.sleep(for: .seconds(20))
+            try await machine.pause()
+            try await Task.sleep(for: .seconds(3))
+            try await machine.resume()
+            try await Task.sleep(for: .seconds(5))
+            try await machine.forceStop()
+        }
+    } catch {
+        fail("\(error.localizedDescription)")
     }
 }
 
