@@ -47,6 +47,10 @@ final class MachineStore {
     private(set) var damagedBundles: [URL] = []
     var lastError: String?
 
+    /// Drives the wizard from wherever it is asked for — the toolbar, the empty state, or the
+    /// File menu. Keeping it here rather than in a view is what lets a menu command reach it.
+    var isCreatingMachine = false
+
     private let library: MachineLibrary
     private let backend = VZBackend()
     private let installers = InstallerImageStore()
