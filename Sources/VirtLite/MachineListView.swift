@@ -5,7 +5,6 @@ import VirtLiteCore
 struct MachineListView: View {
     @Environment(MachineStore.self) private var store
     @State private var selection: URL?
-    @State private var isCreating = false
 
     var body: some View {
         @Bindable var store = store
@@ -37,14 +36,14 @@ struct MachineListView: View {
                     } description: {
                         Text("Create one to get started.")
                     } actions: {
-                        Button("New Machine…") { isCreating = true }
+                        Button("New Machine…") { store.isCreatingMachine = true }
                     }
                 }
             }
             .toolbar {
                 ToolbarItem {
                     Button {
-                        isCreating = true
+                        store.isCreatingMachine = true
                     } label: {
                         Label("New Machine", systemImage: "plus")
                     }
@@ -58,7 +57,7 @@ struct MachineListView: View {
                 HostCapabilitiesView(limits: store.hardwareLimits)
             }
         }
-        .sheet(isPresented: $isCreating) {
+        .sheet(isPresented: $store.isCreatingMachine) {
             CreateMachineView { entry in
                 selection = entry.id
             }

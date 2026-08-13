@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import VirtLiteCore
 
 /// The selected machine: what it is, and what can be done with it.
@@ -29,12 +30,19 @@ struct MachineDetailView: View {
                     Text("Network").foregroundStyle(.secondary)
                     Text("Shared with the host (NAT)")
                 }
-                if entry.installerISO != nil {
-                    GridRow {
-                        Text("Installer").foregroundStyle(.secondary)
-                        Text("Attached until the guest is installed")
-                    }
+                GridRow {
+                    Text("Installer").foregroundStyle(.secondary)
+                    installerRow
                 }
+            }
+
+            if let hint = entry.hint {
+                Label(hint, systemImage: "exclamationmark.circle")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.quaternary.opacity(0.4), in: .rect(cornerRadius: 6))
             }
 
             controls
@@ -43,6 +51,47 @@ struct MachineDetailView: View {
         }
         .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// The installer is shown and controlled explicitly. Nothing on the host can tell a finished
+    /// installation from an abandoned one, so detaching is the user's call rather than a guess
+    /// the app makes on their behalf (INS-01).
+    @ViewBuilder
+    private var installerRow: some View {
+        if let iso = entry.installerISO {
+            HStack(spacing: 8) {
+                Text(iso.lastPathComponent)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                Button("Eject") {
+                    store.ejectInstaller(from: entry)
+                }
+                .controlSize(.small)
+                .disabled(entry.state.isActive)
+                .help("Detach the image once the guest is installed, so it boots from its own disk.")
+            }
+        } else {
+            HStack(spacing: 8) {
+                Text("None").foregroundStyle(.secondary)
+
+                Button("Attach…", action: attachInstaller)
+                    .controlSize(.small)
+                    .disabled(entry.state.isActive)
+            }
+        }
+    }
+
+    private func attachInstaller() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "iso") ?? .diskImage]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.prompt = "Attach"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            store.attachInstaller(url, to: entry)
+        }
     }
 
     private var header: some View {
