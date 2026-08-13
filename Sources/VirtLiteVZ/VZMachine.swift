@@ -8,6 +8,11 @@ import VirtLiteCore
 /// framework requires it, and breaking the rule produces crashes that only appear under load,
 /// long after the code that caused them (ARC-03). The rest of the app never sees that queue —
 /// it awaits, and the hop happens here.
+///
+/// That queue is the main one. A machine that shows a screen has to be, because
+/// `VZVirtualMachineView` binds to the machine from the main thread, and a machine cannot live
+/// on two queues at once. The framework does its actual work off-thread regardless; what runs
+/// here is bookkeeping and completion handlers.
 public final class VZMachine: NSObject, VMLifecycle, @unchecked Sendable {
 
     private let queue: DispatchQueue
@@ -24,7 +29,7 @@ public final class VZMachine: NSObject, VMLifecycle, @unchecked Sendable {
 
     public init(configuration: VZVirtualMachineConfiguration, name: String) {
         self.configuration = configuration
-        self.queue = DispatchQueue(label: "com.ispy4you.virtlite.vm.\(name)")
+        self.queue = .main
 
         let (stream, continuation) = AsyncStream<VMState>.makeStream(
             bufferingPolicy: .bufferingNewest(16)
@@ -34,12 +39,33 @@ public final class VZMachine: NSObject, VMLifecycle, @unchecked Sendable {
 
         super.init()
 
-        // The machine is created on its own queue as well — the framework is particular about
-        // this from the moment the object exists, not merely once it is running.
-        queue.sync {
+        // The machine is created on its queue as well — the framework is particular about this
+        // from the moment the object exists, not merely once it is running.
+        if Thread.isMainThread {
             self.machine = VZVirtualMachine(configuration: configuration, queue: queue)
             self.machine.delegate = self
+        } else {
+            queue.sync {
+                self.machine = VZVirtualMachine(configuration: configuration, queue: queue)
+                self.machine.delegate = self
+            }
         }
+    }
+
+    /// A view showing the guest's screen.
+    ///
+    /// This is the one place a framework type crosses into the interface, and the exception is
+    /// deliberate: `VZVirtualMachineView` is an NSView handing over a framebuffer and input, and
+    /// wrapping it in an abstraction would buy nothing (ARC-02). The interface receives an
+    /// NSView and never names a VZ type.
+    @MainActor
+    public func makeScreenView() -> NSView {
+        let view = VZVirtualMachineView()
+        view.virtualMachine = machine
+        // Without this the guest never receives a keystroke — the view has to be told it is
+        // allowed to take over input (HW-05).
+        view.capturesSystemKeys = true
+        return view
     }
 
     deinit {
